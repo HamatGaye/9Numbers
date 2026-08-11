@@ -17,8 +17,10 @@ import { analyzeGambianNumber, prettyPrint, type NumberAnalysis, type Operator }
 import {
   getAllContacts,
   requestContactsPermission,
+  restorePhoneNumbers,
   updateContactPhones,
   type PhoneUpdate,
+  type RestoreUpdate,
 } from '../utils/contacts';
 import { getBackups, removeBackup, saveBackup, updateSettings, type BackupChange } from '../utils/storage';
 
@@ -261,29 +263,23 @@ export default function HomeScreen() {
             setAppState('updating');
             setProgress({ done: 0, total: run.changes.length });
 
-            const byContact = new Map<string, BackupChange[]>();
-            for (const change of run.changes) {
-              const list = byContact.get(change.contactId) ?? [];
-              list.push(change);
-              byContact.set(change.contactId, list);
-            }
+            const updates: RestoreUpdate[] = run.changes.map(c => ({
+              currentNumber: c.newNumber,
+              newNumber: c.oldNumber,
+            }));
 
             let reverted = 0;
-            for (const [contactId, changes] of byContact) {
-              try {
-                const updates: PhoneUpdate[] = changes.map(c => ({
-                  phoneId: c.phoneId,
-                  currentNumber: c.newNumber,
-                  newNumber: c.oldNumber,
-                }));
-                const applied = await updateContactPhones(contactId, updates);
-                reverted += applied.length;
-              } catch (error) {
-                console.error('Failed to revert contact', contactId, error);
-              }
-              setProgress(prev => ({ done: prev.done + changes.length, total: prev.total }));
+            try {
+              const result = await restorePhoneNumbers(
+                updates,
+                (done) => setProgress(prev => ({ done: Math.min(done, prev.total), total: prev.total }))
+              );
+              reverted = result.restored;
+            } catch (error) {
+              console.error('Failed to revert migration', error);
             }
 
+            setProgress({ done: run.changes.length, total: run.changes.length });
             await removeLastBackup();
             setIsReverting(false);
             setUpdatedCount(reverted);

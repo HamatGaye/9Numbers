@@ -9,6 +9,8 @@
  * means a missing module shows a friendly alert instead of a dark screen.
  */
 
+import { nationalDigits } from './migration';
+
 export interface RawContactPhone {
   id?: string;
   number: string;
@@ -30,6 +32,18 @@ export interface AppliedChange {
   phoneId: string;
   oldNumber: string;
   newNumber: string;
+}
+
+export interface RestoreUpdate {
+  /** The number as currently stored in the contact book (usually the 9-digit form). */
+  currentNumber: string;
+  /** The value to write back (the original 7-digit form). */
+  newNumber: string;
+}
+
+export interface RestoreResult {
+  restored: number;
+  failed: number;
 }
 
 export class ContactsUnavailableError extends Error {
@@ -102,4 +116,61 @@ export async function updateContactPhones(
 
   await contact.patch({ phones });
   return applied;
+}
+
+/**
+ * Restores numbers back to their previous values by matching on the number
+ * itself, NOT the stored contact id.
+ *
+ * On Android the contacts provider can reassign a contact's `_ID` after a
+ * patch (aggregation/reaggregation), which makes ids captured in a backup go
+ * stale. The number is the ground truth: we rescan the contact book, find every
+ * contact that currently contains a `currentNumber`, and write `newNumber` back.
+ */
+export async function restorePhoneNumbers(
+  updates: RestoreUpdate[],
+  onProgress?: (processed: number, total: number) => void
+): Promise<RestoreResult> {
+  const mod = await loadContacts();
+  const details = await mod.Contact.getAllDetails([mod.ContactField.PHONES]);
+
+  const replacements = new Map<string, string>();
+  for (const update of updates) {
+    const key = nationalDigits(update.currentNumber);
+    if (key) replacements.set(key, update.newNumber);
+  }
+  if (replacements.size === 0) return { restored: 0, failed: 0 };
+
+  let restored = 0;
+  let failed = 0;
+  let processed = 0;
+
+  for (const contact of details) {
+    const updatesForContact: PhoneUpdate[] = [];
+    for (const phone of contact.phones ?? []) {
+      if (!phone.number) continue;
+      const key = nationalDigits(phone.number);
+      if (!key) continue;
+      const replacement = replacements.get(key);
+      if (!replacement) continue;
+      updatesForContact.push({
+        phoneId: phone.id,
+        currentNumber: phone.number,
+        newNumber: replacement,
+      });
+    }
+    if (updatesForContact.length > 0) {
+      try {
+        const applied = await updateContactPhones(contact.id, updatesForContact);
+        restored += applied.length;
+      } catch (error) {
+        console.error('Failed to restore contact', contact.id, error);
+        failed++;
+      }
+    }
+    processed++;
+    onProgress?.(processed, details.length);
+  }
+
+  return { restored, failed };
 }

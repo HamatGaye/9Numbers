@@ -194,6 +194,17 @@ function formatDisplay(parsed: ParseResult, national: string): string {
   return national;
 }
 
+/**
+ * Normalizes a stored phone number to its national 7- or 9-digit form,
+ * ignoring formatting and any +220 / 00220 / 220 country-code prefix.
+ * Returns null when the number is not a parseable Gambian national number.
+ */
+export function nationalDigits(raw: string): string | null {
+  const parsed = parseGambian(raw);
+  if (!parsed.isGambian || !/^\d{7,9}$/.test(parsed.national)) return null;
+  return parsed.national;
+}
+
 /** Backwards-compatible helper for callers that only care about the outcome. */
 export function migrateGambianNumber(raw: string): {
   needsMigration: boolean;

@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { updateContactPhones, type PhoneUpdate } from '../utils/contacts';
+import { restorePhoneNumbers, type RestoreUpdate } from '../utils/contacts';
 import { clearBackups, getBackups, removeBackup, type BackupRun } from '../utils/storage';
 
 function formatDate(iso: string): string {
@@ -51,39 +51,38 @@ export default function BackupsScreen() {
             style: 'destructive',
             onPress: async () => {
               setRestoringId(run.runId);
-              const byContact = new Map<string, typeof run.changes>();
-              for (const change of run.changes) {
-                const list = byContact.get(change.contactId) ?? [];
-                list.push(change);
-                byContact.set(change.contactId, list);
-              }
+              const updates: RestoreUpdate[] = run.changes.map(c => ({
+                currentNumber: c.newNumber,
+                newNumber: c.oldNumber,
+              }));
 
               let reverted = 0;
               let failed = 0;
-              for (const [contactId, changes] of byContact) {
-                try {
-                  const updates: PhoneUpdate[] = changes.map(c => ({
-                    phoneId: c.phoneId,
-                    currentNumber: c.newNumber,
-                    newNumber: c.oldNumber,
-                  }));
-                  const applied = await updateContactPhones(contactId, updates);
-                  reverted += applied.length;
-                } catch (error) {
-                  console.error('Failed to restore contact', contactId, error);
-                  failed++;
-                }
+              try {
+                const result = await restorePhoneNumbers(updates);
+                reverted = result.restored;
+                failed = result.failed;
+              } catch (error) {
+                console.error('Failed to restore backup', error);
+                failed = 1;
               }
 
               setRestoringId(null);
-              if (failed === byContact.size) {
-                Alert.alert('Restore failed', 'None of the contacts could be restored.');
+              if (reverted === 0 && failed > 0) {
+                Alert.alert('Restore failed', 'None of the numbers could be restored.');
+              } else if (reverted === 0) {
+                Alert.alert(
+                  'Nothing to restore',
+                  'None of the numbers from this backup were found in your contacts.'
+                );
               } else {
                 await removeBackup(run.runId);
                 refresh();
                 Alert.alert(
                   'Restore complete',
-                  `${reverted} number${reverted === 1 ? '' : 's'} restored.${failed > 0 ? ` ${failed} contact${failed === 1 ? '' : 's'} failed.` : ''}`
+                  `${reverted} number${reverted === 1 ? '' : 's'} restored.${
+                    failed > 0 ? ` ${failed} contact${failed === 1 ? '' : 's'} failed.` : ''
+                  }`
                 );
               }
             },
