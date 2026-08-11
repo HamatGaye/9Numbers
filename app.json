@@ -26,6 +26,12 @@
     "plugins": [
       "expo-router",
       [
+        "expo-contacts",
+        {
+          "contactsPermission": "9Numbers needs access to your contacts so it can update them to The Gambia's new 9-digit format. Your contacts are never uploaded anywhere."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#ffffff",
