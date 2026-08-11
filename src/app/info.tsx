@@ -151,6 +151,52 @@ export default function InfoScreen() {
         </View>
 
         <View className="bg-white dark:bg-slate-900 rounded-2xl p-5 mb-4 shadow-sm">
+          <Text className="text-brand-ink dark:text-white text-lg font-bold mb-1">
+            After migrating your contacts
+          </Text>
+          <Text className="text-slate-500 dark:text-slate-400 text-sm leading-5 mb-3">
+            Calls and SMS already use the new 9-digit numbers in your address book. WhatsApp works
+            differently: it shows the number each account is{' '}
+            <Text className="text-brand-ink dark:text-white font-semibold">registered</Text> with, not
+            the one in your contacts. Your contacts&apos; WhatsApp profiles will keep showing the old
+            7-digit number until each person migrates their own WhatsApp account — no app can do
+            this on their behalf.
+          </Text>
+          <Text className="text-brand-ink dark:text-white font-semibold text-sm mb-2">
+            To switch your own WhatsApp account to 9 digits:
+          </Text>
+          {[
+            'Open WhatsApp → Settings → Account',
+            'Tap "Change number" and confirm',
+            'Enter your old 7-digit number, then your new 9-digit number',
+            'Your chats and history transfer to the new number automatically',
+          ].map((step, i) => (
+            <View key={step} className="flex-row mb-2">
+              <View className="w-6 h-6 rounded-full bg-brand-blue/10 items-center justify-center mr-2.5">
+                <Text className="text-brand-blue dark:text-blue-400 font-bold text-xs">
+                  {i + 1}
+                </Text>
+              </View>
+              <Text className="text-slate-600 dark:text-slate-300 text-sm flex-1">{step}</Text>
+            </View>
+          ))}
+          <Text className="text-slate-400 dark:text-slate-500 text-xs mt-2">
+            Ask the people you contact regularly to do the same, so their WhatsApp profiles match
+            the numbers in your address book.
+          </Text>
+          <View className="mt-3 bg-brand-cream dark:bg-slate-800 rounded-xl p-3">
+            <Text className="text-brand-ink dark:text-white font-semibold text-sm mb-1">
+              WhatsApp still showing old numbers?
+            </Text>
+            <Text className="text-slate-500 dark:text-slate-400 text-sm leading-5">
+              WhatsApp keeps its own copy of your contacts and re-syncs lazily. Close the app fully
+              and reopen it, or toggle WhatsApp&apos;s Contacts permission off and on in system
+              settings — either forces a re-sync within a minute.
+            </Text>
+          </View>
+        </View>
+
+        <View className="bg-white dark:bg-slate-900 rounded-2xl p-5 mb-4 shadow-sm">
           <Text className="text-brand-ink dark:text-white text-lg font-bold mb-3">FAQ</Text>
           {FAQ.map((item, i) => (
             <View key={item.q} className="mb-2">
