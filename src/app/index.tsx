@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { analyzeGambianNumber, prettyPrint, type NumberAnalysis, type Operator } from '../utils/migration';
 import {
   getAllContacts,
   requestContactsPermission,
@@ -22,6 +21,7 @@ import {
   type PhoneUpdate,
   type RestoreUpdate,
 } from '../utils/contacts';
+import { analyzeGambianNumber, prettyPrint, type NumberAnalysis, type Operator } from '../utils/migration';
 import { getBackups, removeBackup, saveBackup, updateSettings, type BackupChange } from '../utils/storage';
 
 type AppState = 'welcome' | 'permission' | 'scanning' | 'review' | 'updating' | 'success';
