@@ -1,9 +1,9 @@
-import { Contact, ContactField } from 'expo-contacts';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { updateContactPhones, type PhoneUpdate } from '../utils/contacts';
 import { clearBackups, getBackups, removeBackup, type BackupRun } from '../utils/storage';
 
 function formatDate(iso: string): string {
@@ -62,17 +62,13 @@ export default function BackupsScreen() {
               let failed = 0;
               for (const [contactId, changes] of byContact) {
                 try {
-                  const contact = new Contact(contactId);
-                  const details = await contact.getDetails([ContactField.PHONES]);
-                  const phones = (details.phones ?? []).map(phone => {
-                    const match =
-                      changes.find(c => c.phoneId && c.phoneId === phone.id) ??
-                      changes.find(c => phone.number === c.newNumber);
-                    if (!match) return phone;
-                    reverted++;
-                    return { ...phone, number: match.oldNumber };
-                  });
-                  await contact.patch({ phones });
+                  const updates: PhoneUpdate[] = changes.map(c => ({
+                    phoneId: c.phoneId,
+                    currentNumber: c.newNumber,
+                    newNumber: c.oldNumber,
+                  }));
+                  const applied = await updateContactPhones(contactId, updates);
+                  reverted += applied.length;
                 } catch (error) {
                   console.error('Failed to restore contact', contactId, error);
                   failed++;

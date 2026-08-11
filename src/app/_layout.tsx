@@ -7,6 +7,7 @@ import '../global.css';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
+import { ErrorBoundary } from '@/components/error-boundary';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -14,8 +15,10 @@ export default function TabLayout() {
   const colorScheme = useColorScheme();
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
+      <ErrorBoundary>
+        <AnimatedSplashOverlay />
+        <AppTabs />
+      </ErrorBoundary>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
     </ThemeProvider>
   );

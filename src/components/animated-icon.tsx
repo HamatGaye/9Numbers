@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import * as SplashScreen from 'expo-splash-screen';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
 import Animated, { Easing, Keyframe } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
@@ -11,6 +11,13 @@ const DURATION = 600;
 export function AnimatedSplashOverlay() {
   const [animate, setAnimate] = useState(false);
   const [visible, setVisible] = useState(true);
+
+  // Fail-safe: never let the overlay cover the app (e.g. if the exit animation
+  // never fires for any reason). Force-hide it shortly after mount.
+  useEffect(() => {
+    const timer = setTimeout(() => setVisible(false), 3000);
+    return () => clearTimeout(timer);
+  }, []);
 
   if (!visible) return null;
 
@@ -49,9 +56,11 @@ export function AnimatedSplashOverlay() {
   ) : (
     <View
       onLayout={() => {
-        SplashScreen.hideAsync().finally(() => {
-          setAnimate(true);
-        });
+        SplashScreen.hideAsync()
+          .catch(() => {})
+          .finally(() => {
+            setAnimate(true);
+          });
       }}
       style={styles.splashOverlay}>
       {image}

@@ -1,4 +1,3 @@
-import { Contact, ContactField, ContactsSortOrder, requestPermissionsAsync } from 'expo-contacts';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -15,12 +14,18 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { analyzeGambianNumber, prettyPrint, type NumberAnalysis, type Operator } from '../utils/migration';
+import {
+  getAllContacts,
+  requestContactsPermission,
+  updateContactPhones,
+  type PhoneUpdate,
+} from '../utils/contacts';
 import { getBackups, removeBackup, saveBackup, updateSettings, type BackupChange } from '../utils/storage';
 
 type AppState = 'welcome' | 'permission' | 'scanning' | 'review' | 'updating' | 'success';
 
 interface PendingNumber {
-  phoneId: string;
+  phoneId: string | undefined;
   original: string;
   analysis: NumberAnalysis;
 }
@@ -87,28 +92,22 @@ export default function HomeScreen() {
 
     try {
       setScanStage(1);
-      const perm = await requestPermissionsAsync();
+      const granted = await requestContactsPermission();
 
-      if (perm.status !== 'granted') {
+      if (!granted) {
         setAppState('permission');
         return;
       }
 
       setScanStage(2);
-      const details = await Contact.getAllDetails(
-        [ContactField.FULL_NAME, ContactField.PHONES],
-        { sortOrder: ContactsSortOrder.GivenName }
-      );
+      const details = await getAllContacts();
 
       const pending: PendingContact[] = [];
       const stats: ScanStats = { contacts: 0, numbers: 0, alreadyMigrated: 0, notMigrating: 0, byOperator: {} };
 
       for (const contact of details) {
-        if (!contact.phones || contact.phones.length === 0) continue;
-
         const numbers: PendingNumber[] = [];
         for (const phone of contact.phones) {
-          if (!phone.number) continue;
           const analysis = analyzeGambianNumber(phone.number);
           if (!analysis.needsMigration) {
             if (analysis.reason === 'already-migrated') stats.alreadyMigrated++;
@@ -144,7 +143,10 @@ export default function HomeScreen() {
       setAppState('review');
     } catch (error) {
       console.error(error);
-      Alert.alert('Something went wrong', 'We could not read your contacts. Please try again.');
+      Alert.alert(
+        'Contacts unavailable',
+        error instanceof Error ? error.message : 'We could not read your contacts. Please try again.'
+      );
       setAppState('welcome');
     }
   }, []);
@@ -175,30 +177,30 @@ export default function HomeScreen() {
 
     for (const item of selected) {
       try {
-        const contact = new Contact(item.contactId);
-        const details = await contact.getDetails([ContactField.PHONES]);
-        const phones = (details.phones ?? []).map(phone => {
-          if (!phone.number) return phone;
-          const currentNumber = phone.number;
-          const match =
-            item.numbers.find(n => n.phoneId && n.phoneId === phone.id) ??
-            item.numbers.find(n => currentNumber === n.original);
-          if (!match) return phone;
-          const newNumber = match.analysis.display!;
+        const updates: PhoneUpdate[] = item.numbers.map(n => ({
+          phoneId: n.phoneId,
+          currentNumber: n.original,
+          newNumber: n.analysis.display!,
+        }));
+        const applied = await updateContactPhones(item.contactId, updates);
+
+        if (applied.length > 0) {
+          succeededContacts++;
+        }
+        for (const change of applied) {
+          const match = item.numbers.find(
+            n => n.phoneId === change.phoneId || n.analysis.display === change.newNumber
+          );
           changes.push({
             contactId: item.contactId,
             contactName: item.name,
-            phoneId: phone.id,
-            oldNumber: currentNumber,
-            newNumber,
+            phoneId: change.phoneId,
+            oldNumber: change.oldNumber,
+            newNumber: change.newNumber,
           });
-
-          operatorCounts[match.analysis.operator] = (operatorCounts[match.analysis.operator] ?? 0) + 1;
-          return { ...phone, number: newNumber };
-        });
-
-        await contact.patch({ phones });
-        succeededContacts++;
+          operatorCounts[match?.analysis.operator ?? 'Unknown'] =
+            (operatorCounts[match?.analysis.operator ?? 'Unknown'] ?? 0) + 1;
+        }
       } catch (error) {
         console.error('Failed to update contact', item.name, error);
       }
@@ -269,17 +271,13 @@ export default function HomeScreen() {
             let reverted = 0;
             for (const [contactId, changes] of byContact) {
               try {
-                const contact = new Contact(contactId);
-                const details = await contact.getDetails([ContactField.PHONES]);
-                const phones = (details.phones ?? []).map(phone => {
-                  const match =
-                    changes.find(c => c.phoneId && c.phoneId === phone.id) ??
-                    changes.find(c => phone.number === c.newNumber);
-                  if (!match) return phone;
-                  reverted++;
-                  return { ...phone, number: match.oldNumber };
-                });
-                await contact.patch({ phones });
+                const updates: PhoneUpdate[] = changes.map(c => ({
+                  phoneId: c.phoneId,
+                  currentNumber: c.newNumber,
+                  newNumber: c.oldNumber,
+                }));
+                const applied = await updateContactPhones(contactId, updates);
+                reverted += applied.length;
               } catch (error) {
                 console.error('Failed to revert contact', contactId, error);
               }
