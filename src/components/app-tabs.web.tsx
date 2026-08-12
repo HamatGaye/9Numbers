@@ -11,7 +11,7 @@ import { Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native'
 import { Colors, MaxContentWidth, Spacing } from '@/constants/theme';
 
 /**
- * Web tab bar: a floating pill, matching the gold accent used on native.
+ * Web tab bar: a floating pill, matching the blue accent used on native.
  *
  * It previously highlighted the active tab in the old brand red and pointed at a
  * route named `home`, while the native tabs use `index` — so the first tab never
@@ -66,8 +66,8 @@ export function CustomTabList(props: TabListProps) {
   );
 }
 
-const GOLD = '#E3A83C';
-const GOLD_INK = '#20180A';
+const BLUE = '#2563EB';
+const BLUE_INK = '#FFFFFF';
 
 const styles = StyleSheet.create({
   slot: { height: '100%' },
@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     borderRadius: 999,
   },
-  tabFocused: { backgroundColor: GOLD },
+  tabFocused: { backgroundColor: BLUE },
   label: { color: '#8B93A1', fontWeight: '600', fontSize: 13 },
-  labelFocused: { color: GOLD_INK, fontWeight: '700', fontSize: 13 },
+  labelFocused: { color: BLUE_INK, fontWeight: '700', fontSize: 13 },
 });

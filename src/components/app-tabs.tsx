@@ -14,7 +14,7 @@ import { Colors } from '@/constants/theme';
  *    filled variant when a tab is active, which is the standard cue on both
  *    platforms.
  *  - **Gold selection.** The accent now matches the app instead of leaving the
- *    system blue tint against a gold-accented UI.
+ *    system blue tint against a blue-accented UI.
  *  - **A translucent bar on iOS**, so content scrolls under it, plus
  *    `minimizeBehavior` so the bar shrinks out of the way while scrolling on
  *    iOS 26. On Android the bar stays opaque and picks up a tinted indicator,

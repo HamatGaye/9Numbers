@@ -189,7 +189,7 @@ export default function BackupsScreen() {
                     </Text>
                     {idx === 0 && (
                       <View className="ml-2">
-                        <Pill label="Latest" tone="gold" />
+                        <Pill label="Latest" tone="blue" />
                       </View>
                     )}
                   </Row>

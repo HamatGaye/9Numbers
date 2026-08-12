@@ -37,10 +37,10 @@ export const FLAG_STRIPES = [
   'bg-brand-green',
 ];
 
-/** Gold accent, for anything needing a raw colour value. */
-export const GOLD = '#E3A83C';
+/** Brand blue, for anything needing a raw colour value. */
+export const BLUE = '#2563EB';
 
-/** `#E3A83C` + 0.12 -> `rgba(227,168,60,0.12)`, for tinted gradients. */
+/** `#2563EB` + 0.12 -> `rgba(37,99,235,0.12)`, for tinted gradients. */
 export function withAlpha(hex: string, alpha: number): string {
   const value = hex.replace('#', '');
   const r = parseInt(value.slice(0, 2), 16);

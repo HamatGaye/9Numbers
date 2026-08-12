@@ -108,7 +108,7 @@ export const Eyebrow = textStyle(
 type ButtonTone = 'primary' | 'quiet' | 'ghost' | 'danger';
 
 const TONES: Record<ButtonTone, { box: string; text: string }> = {
-  primary: { box: 'bg-gold active:bg-gold-deep', text: 'text-gold-ink' },
+  primary: { box: 'bg-blue active:bg-blue-deep', text: 'text-blue-ink' },
   quiet: {
     box: 'bg-paper-sunken dark:bg-night-sunken border border-paper-line dark:border-night-line active:opacity-70',
     text: 'text-ink dark:text-chalk',
@@ -182,20 +182,20 @@ export function Pill({
   active,
 }: {
   label: string;
-  tone?: 'neutral' | 'gold' | 'good' | 'warn';
+  tone?: 'neutral' | 'blue' | 'good' | 'warn';
   dot?: string;
   onPress?: () => void;
   active?: boolean;
 }) {
   const tones = {
     neutral: 'bg-paper-sunken dark:bg-night-sunken',
-    gold: 'bg-gold/15',
+    blue: 'bg-blue/15',
     good: 'bg-good/15',
     warn: 'bg-warn/15',
   };
   const text = {
     neutral: 'text-ink-soft dark:text-chalk-soft',
-    gold: 'text-gold-deep dark:text-gold',
+    blue: 'text-blue-deep dark:text-blue',
     good: 'text-good',
     warn: 'text-warn',
   };
@@ -203,11 +203,11 @@ export function Pill({
   const body = (
     <View
       className={`flex-row items-center rounded-full px-3 py-1.5 ${
-        active ? 'bg-gold' : tones[tone]
+        active ? 'bg-blue' : tones[tone]
       }`}>
       {dot ? <View className={`w-1.5 h-1.5 rounded-full mr-2 ${dot}`} /> : null}
       <Text
-        className={`text-[11px] font-bold ${active ? 'text-gold-ink' : text[tone]}`}>
+        className={`text-[11px] font-bold ${active ? 'text-blue-ink' : text[tone]}`}>
         {label}
       </Text>
     </View>
@@ -247,13 +247,13 @@ export function Check({
       <View
         className={`w-[22px] h-[22px] rounded-lg items-center justify-center border ${
           on
-            ? 'bg-gold border-gold'
+            ? 'bg-blue border-blue'
             : 'border-paper-line dark:border-night-line bg-paper-sunken dark:bg-night-sunken'
         }`}>
         {mixed ? (
-          <View className="w-2.5 h-[2px] bg-gold-ink rounded-full" />
+          <View className="w-2.5 h-[2px] bg-blue-ink rounded-full" />
         ) : checked ? (
-          <Text className="text-gold-ink text-[11px] font-bold">✓</Text>
+          <Text className="text-blue-ink text-[11px] font-bold">✓</Text>
         ) : null}
       </View>
     </Pressable>
@@ -296,7 +296,7 @@ export function OperatorTag({ operator }: { operator: Operator }) {
 
 /**
  * The signature element: the old number struck through, the new one with its
- * added prefix in gold. Mono so the digits align down a list.
+ * added prefix in blue. Mono so the digits align down a list.
  */
 export function NumberDiff({
   before,
@@ -316,7 +316,7 @@ export function NumberDiff({
         {before}
       </Text>
       <Text className="text-ink-soft dark:text-chalk-soft text-[10px] mx-2">→</Text>
-      <Text className={`font-mono font-bold text-gold-deep dark:text-gold ${scale}`}>{prefix}</Text>
+      <Text className={`font-mono font-bold text-blue-deep dark:text-blue ${scale}`}>{prefix}</Text>
       <Text className={`font-mono font-bold text-ink dark:text-chalk ${scale}`}>{rest}</Text>
     </View>
   );

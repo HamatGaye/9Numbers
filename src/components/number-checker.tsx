@@ -14,7 +14,7 @@ import {
  * "What is my new number?" — answered in one field, with no contacts access.
  *
  * Lives in a Sheet so the home screen does not have to carry it. The result is
- * the whole explanation: struck-through old number, gold prefix, new number.
+ * the whole explanation: struck-through old number, blue prefix, new number.
  */
 export function NumberCheckerSheet({
   visible,

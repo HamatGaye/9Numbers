@@ -164,7 +164,7 @@ export function ReviewScreen({
           <Pill
             key={operator}
             label={`${operatorStyle(operator).label} ${count}`}
-            dot={filter === operator ? 'bg-gold-ink' : operatorStyle(operator).bg}
+            dot={filter === operator ? 'bg-blue-ink' : operatorStyle(operator).bg}
             active={filter === operator}
             onPress={() => setFilter(operator)}
           />
@@ -400,7 +400,7 @@ function AttentionRow({
               <Text className="text-ink dark:text-chalk text-[11px] font-bold text-center">
                 {operator}
               </Text>
-              <Text className="font-mono text-gold-deep dark:text-gold text-[11px] font-bold text-center">
+              <Text className="font-mono text-blue-deep dark:text-blue text-[11px] font-bold text-center">
                 {OPERATOR_PREFIXES[operator]}
               </Text>
             </Pressable>

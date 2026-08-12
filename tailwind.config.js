@@ -6,13 +6,13 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Primary action + the highlighted prefix. Warm gold reads as
+        // Primary action + the highlighted prefix. Blue reads as
         // deliberate and calm; red on every button read as an alarm.
-        gold: {
-          DEFAULT: '#E3A83C',
-          soft: '#F0C46E',
-          deep: '#B9832A',
-          ink: '#20180A',
+        blue: {
+          DEFAULT: '#2563EB',
+          soft: '#60A5FA',
+          deep: '#1D4ED8',
+          ink: '#FFFFFF',
         },
         // Light theme: warm paper, not clinical white.
         paper: {

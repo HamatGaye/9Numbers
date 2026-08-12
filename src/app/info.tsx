@@ -103,7 +103,7 @@ export default function InfoScreen() {
                   <Text className="text-ink dark:text-chalk text-[15px]">{op.name}</Text>
                   <Micro className="font-mono mt-0.5">{op.ranges}</Micro>
                 </View>
-                <Text className="font-mono text-gold-deep dark:text-gold text-lg font-bold">
+                <Text className="font-mono text-blue-deep dark:text-blue text-lg font-bold">
                   {OPERATOR_PREFIXES[op.name]}
                 </Text>
               </Row>
@@ -137,7 +137,7 @@ export default function InfoScreen() {
               <Row className="py-3.5">
                 <View
                   className={`w-1.5 h-1.5 rounded-full mr-3 ${
-                    item.current ? 'bg-gold' : item.done ? 'bg-good' : 'bg-operator-gamtel'
+                    item.current ? 'bg-blue' : item.done ? 'bg-good' : 'bg-operator-gamtel'
                   }`}
                 />
                 <Text className="flex-1 text-ink dark:text-chalk text-[15px]">{item.what}</Text>
@@ -183,7 +183,7 @@ export default function InfoScreen() {
               </Text>
               <Micro className="mt-0.5">Free from any network</Micro>
             </View>
-            <Text className="font-mono text-gold-deep dark:text-gold text-xl font-bold">148</Text>
+            <Text className="font-mono text-blue-deep dark:text-blue text-xl font-bold">148</Text>
           </Card>
         </Pressable>
 

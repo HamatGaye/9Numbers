@@ -19,7 +19,7 @@ import {
   Title,
   Well,
 } from '@/components/ui';
-import { GOLD, OPERATOR_UI } from '@/constants/operators';
+import { BLUE, OPERATOR_UI } from '@/constants/operators';
 import { useMigrationStatus } from '@/hooks/use-migration-status';
 import { ContactsUnavailableError, requestContactsPermission } from '@/utils/contacts';
 import { MIGRATING_OPERATORS, OPERATOR_PREFIXES, type MigratingOperator } from '@/utils/migration';
@@ -248,7 +248,7 @@ export default function HomeScreen() {
   if (stage === 'scanning') {
     return (
       <Screen center>
-        <ActivityIndicator size="large" color={GOLD} />
+        <ActivityIndicator size="large" color={BLUE} />
         <Title className="mt-6">Reading contacts</Title>
         <Micro className="mt-1.5">Nothing has changed yet</Micro>
       </Screen>
@@ -262,7 +262,7 @@ export default function HomeScreen() {
         <Display className="text-center">{pct}%</Display>
         <Title className="mt-2">{busyLabel}</Title>
         <View className="w-full h-1 mt-6 rounded-full overflow-hidden bg-paper-sunken dark:bg-night-sunken">
-          <View className="h-full bg-gold rounded-full" style={{ width: `${pct}%` }} />
+          <View className="h-full bg-blue rounded-full" style={{ width: `${pct}%` }} />
         </View>
         <Micro className="mt-3" numberOfLines={1}>
           {progress.currentContact ?? ' '}
@@ -319,7 +319,7 @@ export default function HomeScreen() {
               <Text className="font-display text-ink dark:text-chalk text-lg ml-2.5">9Numbers</Text>
             </Row>
           </View>
-          <Pill label={status.pill} tone={status.urgent ? 'warn' : 'gold'} />
+          <Pill label={status.pill} tone={status.urgent ? 'warn' : 'blue'} />
         </Row>
 
         {/* The change, shown rather than described. */}
