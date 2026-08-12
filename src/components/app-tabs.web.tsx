@@ -1,23 +1,30 @@
 import {
-  Tabs,
   TabList,
-  TabTrigger,
   TabSlot,
-  TabTriggerSlotProps,
-  TabListProps,
+  TabTrigger,
+  Tabs,
+  type TabListProps,
+  type TabTriggerSlotProps,
 } from 'expo-router/ui';
-import { Pressable, useColorScheme, View, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
 
 import { Colors, MaxContentWidth, Spacing } from '@/constants/theme';
 
+/**
+ * Web tab bar: a floating pill, matching the gold accent used on native.
+ *
+ * It previously highlighted the active tab in the old brand red and pointed at a
+ * route named `home`, while the native tabs use `index` — so the first tab never
+ * matched. Both are fixed here.
+ */
 export default function AppTabs() {
   return (
     <Tabs>
-      <TabSlot style={{ height: '100%' }} />
+      <TabSlot style={styles.slot} />
       <TabList asChild>
         <CustomTabList>
-          <TabTrigger name="home" href="/" asChild>
-            <TabButton>Migrate</TabButton>
+          <TabTrigger name="index" href="/" asChild>
+            <TabButton>Update</TabButton>
           </TabTrigger>
           <TabTrigger name="backups" href="/backups" asChild>
             <TabButton>Backups</TabButton>
@@ -33,13 +40,9 @@ export default function AppTabs() {
 
 export function TabButton({ children, isFocused, ...props }: TabTriggerSlotProps) {
   return (
-    <Pressable {...props} style={({ pressed }) => pressed && styles.pressed}>
-      <View
-        style={[
-          styles.tabButtonView,
-          isFocused ? styles.tabButtonFocused : styles.tabButtonIdle,
-        ]}>
-        <Text style={isFocused ? styles.tabLabelFocused : styles.tabLabelIdle}>{children}</Text>
+    <Pressable {...props} style={({ pressed }) => (pressed ? styles.pressed : undefined)}>
+      <View style={[styles.tab, isFocused && styles.tabFocused]}>
+        <Text style={isFocused ? styles.labelFocused : styles.label}>{children}</Text>
       </View>
     </Pressable>
   );
@@ -47,22 +50,28 @@ export function TabButton({ children, isFocused, ...props }: TabTriggerSlotProps
 
 export function CustomTabList(props: TabListProps) {
   const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
 
   return (
-    <View {...props} style={styles.tabListContainer}>
+    <View {...props} style={styles.bar}>
       <View
-        style={[styles.innerContainer, { backgroundColor: colors.backgroundElement }]}>
-        <Text style={[styles.brandText, { color: colors.text }]}>9Numbers</Text>
-
+        style={[
+          styles.inner,
+          { backgroundColor: colors.backgroundElement, borderColor: colors.backgroundSelected },
+        ]}>
+        <Text style={[styles.brand, { color: colors.text }]}>9Numbers</Text>
         {props.children}
       </View>
     </View>
   );
 }
 
+const GOLD = '#E3A83C';
+const GOLD_INK = '#20180A';
+
 const styles = StyleSheet.create({
-  tabListContainer: {
+  slot: { height: '100%' },
+  bar: {
     position: 'absolute',
     width: '100%',
     padding: Spacing.three,
@@ -70,43 +79,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
   },
-  innerContainer: {
+  inner: {
     paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.five,
-    borderRadius: Spacing.five,
+    paddingHorizontal: Spacing.four,
+    borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     alignItems: 'center',
     flexGrow: 1,
     gap: Spacing.two,
     maxWidth: MaxContentWidth,
   },
-  brandText: {
+  brand: {
     marginRight: 'auto',
-    fontWeight: '800',
-    fontSize: 16,
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  tabButtonView: {
-    paddingVertical: Spacing.one,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Spacing.three,
-  },
-  tabButtonFocused: {
-    backgroundColor: '#C8102E',
-  },
-  tabButtonIdle: {
-    backgroundColor: 'transparent',
-  },
-  tabLabelFocused: {
-    color: '#ffffff',
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: 15,
   },
-  tabLabelIdle: {
-    color: '#64748b',
-    fontWeight: '500',
-    fontSize: 14,
+  pressed: { opacity: 0.7 },
+  tab: {
+    paddingVertical: 6,
+    paddingHorizontal: Spacing.three,
+    borderRadius: 999,
   },
+  tabFocused: { backgroundColor: GOLD },
+  label: { color: '#8B93A1', fontWeight: '600', fontSize: 13 },
+  labelFocused: { color: GOLD_INK, fontWeight: '700', fontSize: 13 },
 });
