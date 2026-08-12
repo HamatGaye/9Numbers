@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
-import { Dimensions, StyleSheet, View } from 'react-native';
+import { Dimensions, StyleSheet, useColorScheme, View } from 'react-native';
 import Animated, { Easing, Keyframe } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -11,6 +11,14 @@ const DURATION = 600;
 export function AnimatedSplashOverlay() {
   const [animate, setAnimate] = useState(false);
   const [visible, setVisible] = useState(true);
+
+  // Match the app background, or the overlay flashes white over a dark UI.
+  // Keep these in step with `Colors` in constants/theme.ts.
+  const scheme = useColorScheme();
+  const overlay = [
+    styles.splashOverlay,
+    { backgroundColor: scheme === 'dark' ? '#0B0D11' : '#FAF7F1' },
+  ];
 
   // Fail-safe: never let the overlay cover the app (e.g. if the exit animation
   // never fires for any reason). Force-hide it shortly after mount.
@@ -50,7 +58,7 @@ export function AnimatedSplashOverlay() {
           scheduleOnRN(setVisible, false);
         }
       })}
-      style={styles.splashOverlay}>
+      style={overlay}>
       {image}
     </Animated.View>
   ) : (
@@ -62,7 +70,7 @@ export function AnimatedSplashOverlay() {
             setAnimate(true);
           });
       }}
-      style={styles.splashOverlay}>
+      style={overlay}>
       {image}
     </View>
   );
@@ -150,7 +158,6 @@ const styles = StyleSheet.create({
   },
   splashOverlay: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,
