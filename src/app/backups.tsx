@@ -1,7 +1,8 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 
+import { alert } from '@/components/alert';
 import {
   Button,
   Card,
@@ -63,7 +64,7 @@ export default function BackupsScreen() {
    */
   const restore = useCallback(
     (run: BackupRun) => {
-      Alert.alert(
+      alert(
         'Restore old numbers?',
         `${run.changeCount} number${run.changeCount === 1 ? '' : 's'} will go back to 7 digits.`,
         [
@@ -79,7 +80,7 @@ export default function BackupsScreen() {
                 setDetail(null);
 
                 if (result.revertedCount === 0) {
-                  Alert.alert(
+                  alert(
                     'Nothing restored',
                     result.failedContacts.length > 0
                       ? 'Your contacts could not be written to. The backup is still saved.'
@@ -88,15 +89,15 @@ export default function BackupsScreen() {
                   return;
                 }
 
-                Alert.alert(
+                alert(
                   'Restored',
                   result.remaining.length > 0
                     ? `${result.revertedCount} done, ${result.remaining.length} still in this backup.`
                     : `${result.revertedCount} number${result.revertedCount === 1 ? '' : 's'} restored.`
                 );
               } catch (error) {
-                console.error('[9Numbers] restore failed', error);
-                Alert.alert(
+                console.error('[7To9] restore failed', error);
+                alert(
                   'Restore failed',
                   error instanceof Error ? error.message : 'Your backup is still saved.'
                 );
@@ -113,7 +114,7 @@ export default function BackupsScreen() {
 
   const remove = useCallback(
     (run: BackupRun) => {
-      Alert.alert('Delete this backup?', 'Your numbers stay as they are. The undo is lost.', [
+      alert('Delete this backup?', 'Your numbers stay as they are. The undo is lost.', [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
@@ -130,7 +131,7 @@ export default function BackupsScreen() {
   );
 
   const clearAll = useCallback(() => {
-    Alert.alert('Delete all backups?', 'Your numbers stay as they are. All undos are lost.', [
+    alert('Delete all backups?', 'Your numbers stay as they are. All undos are lost.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete all',

@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "9Numbers",
-    "slug": "9Numbers",
+    "name": "7To9",
+    "slug": "7To9",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "9numbers",
+    "scheme": "7to9",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon"
@@ -20,14 +20,15 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "bundler": "metro"
+      "bundler": "metro",
+      "output": "server"
     },
     "plugins": [
       "expo-router",
       [
         "expo-contacts",
         {
-          "contactsPermission": "9Numbers needs access to your contacts so it can update them to The Gambia's new 9-digit format. Your contacts are never uploaded anywhere."
+          "contactsPermission": "7To9 needs access to your contacts so it can update them to The Gambia's new 9-digit format. Your contacts are never uploaded anywhere."
         }
       ],
       [

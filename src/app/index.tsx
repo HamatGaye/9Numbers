@@ -1,8 +1,11 @@
 import { router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, ScrollView, Text, View } from 'react-native';
 
+import { alert } from '@/components/alert';
 import { NumberCheckerSheet } from '@/components/number-checker';
+import { PaymentScreen, type PaymentPhase } from '@/components/payment-screen';
 import { PrefixHero } from '@/components/prefix-hero';
 import { ReviewScreen } from '@/components/review-screen';
 import {
@@ -22,6 +25,15 @@ import {
 import { BLUE, OPERATOR_UI } from '@/constants/operators';
 import { useMigrationStatus } from '@/hooks/use-migration-status';
 import { ContactsUnavailableError, requestContactsPermission } from '@/utils/contacts';
+import {
+  hasValidLicense,
+  pollUntilSettled,
+  resolvePendingPayments,
+  startCheckout,
+  LicenseUnavailableError,
+  getPrice,
+  storeLicense,
+} from '@/utils/license';
 import { MIGRATING_OPERATORS, OPERATOR_PREFIXES, type MigratingOperator } from '@/utils/migration';
 import { runMigration, runRestore, type RunProgress } from '@/utils/runner';
 import {
@@ -34,9 +46,18 @@ import {
   type AttentionItem,
   type ScanResult,
 } from '@/utils/scan';
-import { getBackups, updateSettings } from '@/utils/storage';
+import { getBackups, getPendingPayments, savePendingPayment, updateSettings } from '@/utils/storage';
 
-type Stage = 'home' | 'permission' | 'scanning' | 'review' | 'working' | 'done';
+type Stage = 'home' | 'permission' | 'scanning' | 'review' | 'payment' | 'working' | 'done';
+
+interface PaymentState {
+  phase: PaymentPhase;
+  amountMinor: number | null;
+  sessionId: string | null;
+  error: string | null;
+}
+
+const IDLE_PAYMENT: PaymentState = { phase: 'ask', amountMinor: null, sessionId: null, error: null };
 
 /** What the last write actually achieved, so the summary can tell the truth. */
 interface Outcome {
@@ -59,6 +80,7 @@ export default function HomeScreen() {
   const [backupCount, setBackupCount] = useState(0);
   const [checkerOpen, setCheckerOpen] = useState(false);
   const [busyLabel, setBusyLabel] = useState('Updating');
+  const [payment, setPayment] = useState<PaymentState>(IDLE_PAYMENT);
 
   /**
    * Guards against a second write starting while one is in flight. A ref, not
@@ -67,6 +89,9 @@ export default function HomeScreen() {
    */
   const writing = useRef(false);
 
+  /** Guards the same for the pay flow: one checkout at a time. */
+  const paying = useRef(false);
+
   const refreshBackups = useCallback(() => {
     getBackups().then(b => setBackupCount(b.length));
   }, []);
@@ -74,6 +99,15 @@ export default function HomeScreen() {
   useEffect(() => {
     refreshBackups();
   }, [refreshBackups, stage]);
+
+  /**
+   * "Payment status checker": any checkout the user started but never
+   * confirmed is re-checked against the backend on every launch, so a payment
+   * that completed while the app was closed unlocks on the next open.
+   */
+  useEffect(() => {
+    void resolvePendingPayments();
+  }, []);
 
   /* ------------------------------------------------------------- scanning */
 
@@ -105,8 +139,8 @@ export default function HomeScreen() {
 
       setStage('review');
     } catch (error) {
-      console.error('[9Numbers] scan failed', error);
-      Alert.alert(
+      console.error('[7To9] scan failed', error);
+      alert(
         'Could not read contacts',
         error instanceof ContactsUnavailableError || error instanceof Error
           ? error.message
@@ -118,17 +152,15 @@ export default function HomeScreen() {
 
   /* -------------------------------------------------------------- writing */
 
-  const confirmMigration = useCallback(async () => {
-    if (writing.current || !scan) return;
-    const targets = selectedTargets(scan.contacts);
-    if (targets.length === 0) return;
-
+  const startMigration = useCallback(async () => {
+    if (!scan) return;
     writing.current = true;
     setBusyLabel('Updating');
-    setProgress({ done: 0, total: targets.length, currentContact: null });
+    setProgress({ done: 0, total: selectedTargets(scan.contacts).length, currentContact: null });
     setStage('working');
 
     try {
+      const targets = selectedTargets(scan.contacts);
       const result = await runMigration(targets, setProgress);
       setOutcome({
         kind: 'migrate',
@@ -143,13 +175,93 @@ export default function HomeScreen() {
       });
       setStage('done');
     } catch (error) {
-      console.error('[9Numbers] migration failed', error);
-      Alert.alert('Update failed', error instanceof Error ? error.message : 'Nothing was changed.');
+      console.error('[7To9] migration failed', error);
+      alert('Update failed', error instanceof Error ? error.message : 'Nothing was changed.');
       setStage('review');
     } finally {
       writing.current = false;
     }
   }, [scan]);
+
+  /**
+   * The gate. In dev builds the license check is skipped so iteration stays
+   * frictionless; in production the migration only starts after a locally
+   * verified (server-signed) license or a freshly confirmed payment.
+   */
+  const confirmMigration = useCallback(async () => {
+    if (writing.current || !scan) return;
+    if (selectedTargets(scan.contacts).length === 0) return;
+
+    if (__DEV__ || (await hasValidLicense())) {
+      await startMigration();
+      return;
+    }
+
+    setPayment(s => ({ ...s, ...IDLE_PAYMENT, phase: 'ask' }));
+    void getPrice()
+      .then(amount => setPayment(s => ({ ...s, amountMinor: amount })))
+      .catch(() => {
+        // price stays unknown; the pay button will surface the real error
+      });
+    setStage('payment');
+  }, [scan, startMigration]);
+
+  const settlePayment = useCallback(
+    async (sessionId: string) => {
+      const result = await pollUntilSettled(sessionId);
+      if (result.status === 'paid' && result.token) {
+        await storeLicense(sessionId, result.token);
+        setPayment(IDLE_PAYMENT);
+        await startMigration();
+        return true;
+      }
+      if (result.status === 'failed' || result.status === 'cancelled') {
+        setPayment(s => ({ ...s, phase: 'error', error: 'The payment was not completed.' }));
+        return false;
+      }
+      setPayment(s => ({ ...s, phase: 'error', error: 'Still waiting for the payment to confirm.' }));
+      return false;
+    },
+    [startMigration]
+  );
+
+  /** Starts a checkout, opens the hosted page, then settles it. */
+  const payForUnlock = useCallback(async () => {
+    if (paying.current) return;
+    paying.current = true;
+    setPayment(s => ({ ...s, phase: 'starting', error: null }));
+    try {
+      const checkout = await startCheckout();
+      await savePendingPayment(checkout.sessionId);
+      setPayment({
+        phase: 'checking',
+        amountMinor: checkout.amountMinor,
+        sessionId: checkout.sessionId,
+        error: null,
+      });
+      WebBrowser.openBrowserAsync(checkout.url).catch(() => {
+        // the page failing to open must not kill the confirmation poll
+      });
+      await settlePayment(checkout.sessionId);
+    } catch (error) {
+      console.error('[7To9] checkout failed', error);
+      setPayment(s => ({
+        ...s,
+        phase: error instanceof LicenseUnavailableError ? 'unavailable' : 'error',
+        error: error instanceof Error ? error.message : 'Please try again.',
+      }));
+    } finally {
+      paying.current = false;
+    }
+  }, [settlePayment]);
+
+  /** Re-checks the session the user most recently started. */
+  const recheckPayment = useCallback(async () => {
+    const sessionId = payment.sessionId ?? (await getPendingPayments())[0]?.sessionId ?? null;
+    if (!sessionId) return;
+    setPayment(s => ({ ...s, phase: 'checking', error: null }));
+    await settlePayment(sessionId);
+  }, [payment.sessionId, settlePayment]);
 
   const undoLast = useCallback(async () => {
     const backups = await getBackups();
@@ -159,7 +271,7 @@ export default function HomeScreen() {
       return;
     }
 
-    Alert.alert(
+    alert(
       'Undo last update?',
       `${run.changeCount} number${run.changeCount === 1 ? '' : 's'} will go back to 7 digits.`,
       [
@@ -187,8 +299,8 @@ export default function HomeScreen() {
               });
               setStage('done');
             } catch (error) {
-              console.error('[9Numbers] undo failed', error);
-              Alert.alert(
+              console.error('[7To9] undo failed', error);
+              alert(
                 'Undo failed',
                 error instanceof Error ? error.message : 'Your backup is still saved.'
               );
@@ -241,6 +353,19 @@ export default function HomeScreen() {
         onAssignOperator={onAssignOperator}
         onConfirm={confirmMigration}
         onCancel={() => setStage('home')}
+      />
+    );
+  }
+
+  if (stage === 'payment') {
+    return (
+      <PaymentScreen
+        phase={payment.phase}
+        amountGmd={payment.amountMinor != null ? (payment.amountMinor / 100).toFixed(2) : null}
+        error={payment.error}
+        onPay={payForUnlock}
+        onRecheck={recheckPayment}
+        onCancel={() => setStage('review')}
       />
     );
   }
@@ -316,7 +441,7 @@ export default function HomeScreen() {
           <View className="flex-1">
             <Row>
               <Flag className="h-1 w-7" />
-              <Text className="font-display text-ink dark:text-chalk text-lg ml-2.5">9Numbers</Text>
+              <Text className="font-display text-ink dark:text-chalk text-lg ml-2.5">7To9</Text>
             </Row>
           </View>
           <Pill label={status.pill} tone={status.urgent ? 'warn' : 'blue'} />

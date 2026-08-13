@@ -13,8 +13,13 @@
  */
 
 import type { ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
+  BackHandler,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -349,38 +354,146 @@ export function Sheet({
       animationType="slide"
       statusBarTranslucent
       onRequestClose={onClose}>
-      <View className="flex-1 justify-end bg-black/50">
-        {/* Tapping the dimmed area dismisses, the standard sheet gesture. */}
-        <Pressable
-          className="flex-1"
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-          onPress={onClose}
-        />
-        <View className="bg-paper dark:bg-night rounded-t-[32px] max-h-[85%] overflow-hidden">
-          <View className="items-center pt-3 pb-1">
-            <View className="w-9 h-1 rounded-full bg-paper-line dark:bg-night-line" />
-          </View>
-          <View className="flex-row items-center justify-between px-5 pt-2 pb-3">
-            <Title>{title}</Title>
-            <IconButton glyph="✕" onPress={onClose} label="Close" />
-          </View>
-          <ScrollView
-            className="px-5"
-            contentContainerClassName="pb-4"
-            keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        className="flex-1">
+        <View className="flex-1 justify-end bg-black/50">
+          {/* Tapping the dimmed area dismisses, the standard sheet gesture. */}
+          <Pressable
+            className="flex-1"
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+            onPress={onClose}
+          />
+          <SheetSurface onClose={onClose} title={title}>
             {children}
-          </ScrollView>
-          {footer ? (
-            <SafeAreaView edges={['bottom']} className="px-5 pt-3">
-              {footer}
-            </SafeAreaView>
-          ) : (
-            <SafeAreaView edges={['bottom']} />
-          )}
+            {footer ? (
+              <SafeAreaView edges={['bottom']} className="px-5 pt-3">
+                {footer}
+              </SafeAreaView>
+            ) : (
+              <SafeAreaView edges={['bottom']} />
+            )}
+          </SheetSurface>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
+  );
+}
+
+/**
+ * The same bottom sheet, but rendered in place instead of in a native Modal.
+ *
+ * Use this whenever the sheet holds a text input. A native Modal window never
+ * receives Android's keyboard events, so a KeyboardAvoidingView inside it
+ * cannot react — the keypad slides over the field. In the main window the
+ * events arrive, and the sheet rides up above the keypad.
+ */
+export function InlineSheet({
+  visible,
+  onClose,
+  title,
+  children,
+  footer,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  title: string;
+  children: ReactNode;
+  footer?: ReactNode;
+}) {
+  const progress = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      Animated.spring(progress, { toValue: 1, useNativeDriver: true }).start();
+    } else {
+      progress.setValue(0);
+    }
+  }, [visible, progress]);
+
+  useEffect(() => {
+    if (!visible) {
+      return;
+    }
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      onClose();
+      return true;
+    });
+    return () => sub.remove();
+  }, [visible, onClose]);
+
+  if (!visible) {
+    return null;
+  }
+
+  return (
+    <View className="absolute inset-0 z-50">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        className="flex-1">
+        <View className="flex-1 justify-end bg-black/50">
+          {/* Tapping the dimmed area dismisses, the standard sheet gesture. */}
+          <Pressable
+            className="flex-1"
+            accessibilityRole="button"
+            accessibilityLabel="Close"
+            onPress={onClose}
+          />
+          <Animated.View
+            style={{
+              transform: [
+                {
+                  translateY: progress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [720, 0],
+                  }),
+                },
+              ],
+            }}>
+            <SheetSurface onClose={onClose} title={title}>
+              {children}
+              {footer ? (
+                <SafeAreaView edges={['bottom']} className="px-5 pt-3">
+                  {footer}
+                </SafeAreaView>
+              ) : (
+                <SafeAreaView edges={['bottom']} />
+              )}
+            </SheetSurface>
+          </Animated.View>
+        </View>
+      </KeyboardAvoidingView>
+    </View>
+  );
+}
+
+/** The chrome every sheet shares: handle, title row, scrollable body. */
+function SheetSurface({
+  onClose,
+  title,
+  children,
+}: {
+  onClose: () => void;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <View className="bg-paper dark:bg-night rounded-t-[32px] max-h-[85%] overflow-hidden">
+      <View className="items-center pt-3 pb-1">
+        <View className="w-9 h-1 rounded-full bg-paper-line dark:bg-night-line" />
+      </View>
+      <View className="flex-row items-center justify-between px-5 pt-2 pb-3">
+        <Title>{title}</Title>
+        <IconButton glyph="✕" onPress={onClose} label="Close" />
+      </View>
+      <ScrollView
+        className="px-5"
+        contentContainerClassName="pb-4"
+        keyboardShouldPersistTaps="handled">
+        {children}
+      </ScrollView>
+    </View>
   );
 }
 

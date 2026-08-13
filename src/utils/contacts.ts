@@ -214,7 +214,7 @@ export async function updateContactPhones(
         newNumber: update.newNumber,
       });
     } catch (error) {
-      console.error('[9Numbers] failed to update phone', existing.id, error);
+      console.error('[7To9] failed to update phone', existing.id, error);
       outcome.skipped.push({
         phoneId: update.phoneId,
         expected: update.currentNumber,

@@ -59,7 +59,7 @@ export function CustomTabList(props: TabListProps) {
           styles.inner,
           { backgroundColor: colors.backgroundElement, borderColor: colors.backgroundSelected },
         ]}>
-        <Text style={[styles.brand, { color: colors.text }]}>9Numbers</Text>
+        <Text style={[styles.brand, { color: colors.text }]}>7To9</Text>
         {props.children}
       </View>
     </View>

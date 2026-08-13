@@ -24,7 +24,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: Error) {
-    console.error('[9Numbers] ErrorBoundary caught:', error);
+    console.error('[7To9] ErrorBoundary caught:', error);
   }
 
   private retry = () => {

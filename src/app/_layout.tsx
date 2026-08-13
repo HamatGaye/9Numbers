@@ -6,6 +6,7 @@ import { useColorScheme } from 'react-native';
 import '../global.css';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { AlertProvider } from '@/components/alert';
 import AppTabs from '@/components/app-tabs';
 import { ErrorBoundary } from '@/components/error-boundary';
 
@@ -17,7 +18,9 @@ export default function TabLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <ErrorBoundary>
         <AnimatedSplashOverlay />
-        <AppTabs />
+        <AlertProvider>
+          <AppTabs />
+        </AlertProvider>
       </ErrorBoundary>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
     </ThemeProvider>

@@ -5,8 +5,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  * No backend - everything stays on the device.
  */
 
-const BACKUP_KEY = '@9numbers/backups';
-const SETTINGS_KEY = '@9numbers/settings';
+const BACKUP_KEY = '@7to9/backups';
+const SETTINGS_KEY = '@7to9/settings';
+const LICENSE_KEY = '@7to9/license';
+const PENDING_PAYMENTS_KEY = '@7to9/pending-payments';
 
 /**
  * How many migration runs we keep. Each change is a few hundred bytes, so this
@@ -152,4 +154,75 @@ export async function recordMigration(changeCount: number): Promise<AppSettings>
     totalMigrated: current.totalMigrated + changeCount,
     hasMigratedBefore: true,
   });
+}
+
+/* ------------------------------------------------------------------ license */
+
+/**
+ * The paid entitlement. `token` is the raw signed LicenseToken JSON — the app
+ * re-verifies its signature (embedded public key) before every migration, so
+ * corrupting this row can never fake a purchase.
+ */
+export interface LicenseRecord {
+  token: string;
+  sessionId: string;
+  obtainedAt: string; // ISO timestamp
+}
+
+/** A checkout the user started but has not confirmed yet. */
+export interface PendingPayment {
+  sessionId: string;
+  createdAt: string; // ISO timestamp
+  checkedAt: string | null; // last time the server was asked about it
+}
+
+function isLicenseRecord(value: unknown): value is LicenseRecord {
+  if (!value || typeof value !== 'object') return false;
+  const record = value as Partial<LicenseRecord>;
+  return typeof record.token === 'string' && typeof record.sessionId === 'string';
+}
+
+function isPendingPayment(value: unknown): value is PendingPayment {
+  if (!value || typeof value !== 'object') return false;
+  const pending = value as Partial<PendingPayment>;
+  return typeof pending.sessionId === 'string' && typeof pending.createdAt === 'string';
+}
+
+export async function getLicenseRecord(): Promise<LicenseRecord | null> {
+  try {
+    const raw = await AsyncStorage.getItem(LICENSE_KEY);
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    return isLicenseRecord(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveLicenseRecord(record: LicenseRecord): Promise<void> {
+  await AsyncStorage.setItem(LICENSE_KEY, JSON.stringify(record));
+}
+
+export async function getPendingPayments(): Promise<PendingPayment[]> {
+  try {
+    const raw = await AsyncStorage.getItem(PENDING_PAYMENTS_KEY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(isPendingPayment);
+  } catch {
+    return [];
+  }
+}
+
+export async function savePendingPayment(sessionId: string): Promise<void> {
+  const pending = await getPendingPayments();
+  if (pending.some(p => p.sessionId === sessionId)) return;
+  pending.push({ sessionId, createdAt: new Date().toISOString(), checkedAt: null });
+  await AsyncStorage.setItem(PENDING_PAYMENTS_KEY, JSON.stringify(pending));
+}
+
+export async function removePendingPayment(sessionId: string): Promise<void> {
+  const next = (await getPendingPayments()).filter(p => p.sessionId !== sessionId);
+  await AsyncStorage.setItem(PENDING_PAYMENTS_KEY, JSON.stringify(next));
 }
