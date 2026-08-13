@@ -28,7 +28,7 @@
       [
         "expo-contacts",
         {
-          "contactsPermission": "7To9 needs access to your contacts so it can update them to The Gambia's new 9-digit format. Your contacts are never uploaded anywhere."
+          "contactsPermission": "7To9 Needs Access To Your Contacts"
         }
       ],
       [
